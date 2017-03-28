@@ -1,5 +1,6 @@
 \documentclass[10pt,twocolumn]{article}
 \usepackage{times}
+\usepackage{url}
 
 % do not change these values
 \baselineskip 12pt
@@ -26,11 +27,20 @@ The time has come to offer LaTeX on the cloud.
 \end{abstract}
 
 \section{Introduction}
+Virtualization is a basic technology for the cloud computing. The growing awareness of the advantage provided by virtualization technology is brought about by economic factors of scarce resouces, government regulation and more competition.
 
+Virtualizaton provides the ability of consilidation for virtual machines(VM). Mutiple VMs share the same physical machine without any interference of each other. However, virtualization providers suppose VMs on the same physical machine are unlikely to use up the whole memory at the same time. So VMs are often configured more memory in total than the capacity of the physical machine. But on the worse case, VMs compete with each other leading to shortness of memory resources. Other technology migration also provided by virtualization must start up soon. Otherwise, some VMs may suffer memory starvation and lose the performance of the application on top of that.
 
+Since the needs of oversold of memory and still high performance ensurance of VMs. Memory prediction is still a valuable research area especially on the area of cloud computing. To relat the memory size and the performance, a traditional approach is to use page miss ratio curve(MRC). MRC shows the miss rate under given memory size. A way to track MRC is to use LRU stack algorithm\cite{Mattson1970Evaluation}. But the time complexity and space usage is high which makes it hard to track MRC online.
+
+Recently there are some breakthroughts to track MRC in efficient ways. Counter Stacks\cite{Wires2014Characterizing} use probabilistic counters to estimate approximate MRC at a fraction of the cost of traditional techniques. SHARDS\cite{shards} simply uses sampling to reduce the size of input trace. Both approachs reduces the time complexity and space cost in constructing MRC and makes it possible to online tracking. AET\cite{aet} descrbes a new kinetic model for MRC construction of LRU caches based on average eviction time(AET). AET runs in linear time asymptotically and uses sampling to minimize the space overhead.
+
+These novel techniques track MRC in low cost. However, none of them makes it in practice on real time system especially on constructing online MRC for virtual machines in virtualization environment. MEB\cite{Wang2016Dynamic} uses optimized balancing tree to construct MRC in virtualization and dynamicly balance memory allocation across all virtual machines on top of a single physical machine. However there are still 30\% overhead. Intermittent Memory tracking which turns off the tracking system during steady periods cuts down the overhead to acceptable range. So online nonstop efficient MRC tracking in virtualization is still a challenge.
 
 \section{Motivation}
+With the development of hardware, a typical host machine in a datacenter now packs tens to hundreds of VMs in order to maximize resouce utilization. VMware ESXi hypervisor has increased the number of VMs supported per host from 32 to 1024 in recent years\cite{vmware}. Memory as shared resources needs to be allocated on demand in order to full resouce utilization but still the minimum QoS has to be guaranteed since users buy for it. VM providers should be able to cope with the situation when memory increases suddenly.
 
+In virtualization environment, guest OS is transparent to the underlying hypervisor. There are only some basic monitoring statics exposed to hypervisor such as VSZ and RSS in linux system. VSZ and RSS are coarse-grained statics which did not reflect the memory usage in a certern period. In the past, working set theory\cite{wss} has been widely used to capture applications' memory needs. Working sets is defined as the set of all pages accessed by a process over a given epoch. However, working set doesn't relate directly to the performance of an application. For example, if an application scans 100 pages sequentially. In a short period, the working set is 100 pages. But allocating 1 page or 100 pages gives the same memory hit ratio because the miss ratio is always 100\%.
 
 
 \section{Design}

@@ -1,3 +1,44 @@
-\begin{thebibliography}{}
+\begin{thebibliography}{1}
+
+\bibitem{wss}
+P.~J. Denning.
+\newblock The working set model for program behavior.
+\newblock {\em Communications of the Acm}, 26(1):43--48, 1968.
+
+\bibitem{aet}
+X.~Hu, X.~Wang, L.~Zhou, Y.~Luo, C.~Ding, and Z.~Wang.
+\newblock Kinetic modeling of data eviction in cache.
+\newblock In {\em 2016 USENIX Annual Technical Conference (USENIX ATC 16)},
+  pages 351--364, Denver, CO, 2016. USENIX Association.
+
+\bibitem{Mattson1970Evaluation}
+R.~L. Mattson, J.~Gecsei, D.~R. Slutz, and I.~L. Traiger.
+\newblock Evaluation techniques for storage hierarchies.
+\newblock {\em Ibm Systems Journal}, 9(2):78--117, 1970.
+
+\bibitem{vmware}
+vSphere 6.0.
+\newblock Configuration maximums.
+\newblock
+  \url{https://www.vmware.com/pdf/vsphere6/r60/vsphere-60-configuration-maximums.pdf},
+  2017.
+
+\bibitem{shards}
+C.~A. Waldspurger, N.~Park, A.~Garthwaite, and I.~Ahmad.
+\newblock Efficient mrc construction with shards.
+\newblock In {\em Usenix Conference on File and Storage Technologies}, pages
+  95--110, 2015.
+
+\bibitem{Wang2016Dynamic}
+Z.~Wang, X.~Wang, F.~Hou, Y.~Luo, and Z.~Wang.
+\newblock Dynamic memory balancing for virtualization.
+\newblock {\em Acm Transactions on Architecture \& Code Optimization}, 13(1):2,
+  2016.
+
+\bibitem{Wires2014Characterizing}
+J.~Wires, S.~Ingram, Z.~Drudi, N.~J.~A. Harvey, and A.~Warfield.
+\newblock Characterizing storage workloads with counter stacks.
+\newblock In {\em Usenix Conference on Operating Systems Design and
+  Implementation}, pages 335--349, 2014.
 
 \end{thebibliography}
