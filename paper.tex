@@ -46,6 +46,14 @@ Recently there are some breakthroughts to track MRC in efficient ways. Counter S
 
 These novel techniques track MRC in low cost. However, none of them makes it in practice on real time system especially on constructing online MRC for virtual machines in virtualization environment. MEB\cite{Wang2016Dynamic} uses optimized balancing tree to construct MRC in virtualization and dynamicly balance memory allocation across all virtual machines on top of a single physical machine. However there are still 30\% overhead. Intermittent Memory tracking which turns off the tracking system during steady periods cuts down the overhead to acceptable range. So online nonstop efficient MRC tracking in virtualization is still a challenge.
 
+\subsection{AET Theory}
+The eviction algorithm used by cache system is usually Least Recently Used (LRU). According to LRU algorithm, cache miss and cache hit both cause the cache block to move no matter how the cache is organized, LRU priority list or LRU stack\cite{Jo2013Efficient}. AET model relates to the average eviction time of cache block. Cache block may be reused several times before it is evicted. the eviction time is the time between the last access and eviction.
+
+AET model is build on the probability of the cache block movement. $AET(c)$ is the Average Eviction Time for all data evictions in a fully associative LRU cache of size c. Suppose $Tm$ is the average time a cache block moves to position $m$. Apparently $T0$ = 0 and $AET(c) = Tc$. Suppose $rt(t)$ is the reuse numbers of reuse time t and n is the total access number. Using $f(t)$ to represent the ratio of the access number with reuse time t. $f(t) = \frac{rt(t)}{n}$. Using $P(t)$ to represent the probability of reuse time that greater than or equal to t. $P(t) = \sum\nolimits_{x \geq t}f(x)$. The movement of cache block is related to the probability $P(t)$. Suppose a cache block is in position $m$. It will move to the next position $m + 1$ if the next access data's reuse time is greater than $Tm$ whose probability is $P(Tm)$. Using another word, the speed of cache block in position m($v(Tm)$) is exactly equals to $P(T_m)$. Since the integration of the speed will be the distance, we will get the following equation.
+\begin{equation}\label{eq1}
+\int_{0}^{AET(c)}v(t)dt=\int_{0}^{AET(c)}P(t)dt=c
+\end{equation}
+Given a cache of size c, according to \ref{eq1}, we can conduct MRC if we know the probability distribution of $P(t)$. $MRC(c) = P(AET(c))$. The probability of the access whose reuse time is greater than average eviction time of the cache is also this cache's miss ratio.
 
 \section{Design}
 

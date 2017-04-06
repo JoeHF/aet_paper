@@ -11,6 +11,12 @@ X.~Hu, X.~Wang, L.~Zhou, Y.~Luo, C.~Ding, and Z.~Wang.
 \newblock In {\em 2016 USENIX Annual Technical Conference (USENIX ATC 16)},
   pages 351--364, Denver, CO, 2016. USENIX Association.
 
+\bibitem{Jo2013Efficient}
+C.~Jo, E.~Gustafsson, J.~Son, and B.~Egger.
+\newblock Efficient live migration of virtual machines using shared storage.
+\newblock In {\em ACM Sigplan/sigops International Conference on Virtual
+  Execution Environments}, pages 41--50, 2013.
+
 \bibitem{Koller2015Centaur}
 R.~Koller, A.~J. Mashtizadeh, and R.~Rangaswami.
 \newblock Centaur: Host-side ssd caching for storage performance control.
