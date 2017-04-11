@@ -1,0 +1,45 @@
+\documentclass[10pt,twocolumn]{article}
+\usepackage{times}
+\usepackage{url}
+
+% do not change these values
+\baselineskip 12pt
+\textheight 9in
+\textwidth 6.5in
+\oddsidemargin 0in
+\topmargin 0in
+\headheight 0in
+\headsep 0in
+
+\begin{document}
+	
+	\title{ClaTex: LaTeX as a Service on the Cloud}
+	\author{John Doe$^1$ and Jane Monroe$^2$ \\
+		\small {\em  $^1$Dept. Cloud, Cloud University \quad
+			$^2$Cloud National Labs} \\ [2mm]
+		\small Submission Type: Research
+	}
+	\date{}
+	\maketitle
+	
+	\begin{abstract}
+		The time has come to offer LaTeX on the cloud.
+	\end{abstract}
+	
+	\section{Design}
+	\subsection{Implementation in Virtualization}
+	In virtualization, host machine knows nearly nothing about virtual machines. Only privileged instructions are emulated to overcome the limitations arising from guest operating system running in Ring 1 and VMM running in Ring 0\cite{MasteringKVM}. To illustrate how AET theory is put into virtualization, we have to understand how memory is managed in full virtualization environment.
+	
+	Page tables are the data structrue used by a virtual memory system to store the mapping between virtual addresses and physical address. Traditionally, OS fully controls all physical memory space and provides a continuous addressing space to each process. But in virtualization, mutiple guest OS share the same physical memory. There should be a method to map guest OS virtual address to real machine physical memory. One way is to use shadow page table. Guest OS will maintain its own virtual memory page table in the guest physical memory frames. For each guest physical memory frame, VMM should map it to host physical memory frame. Shadow page table maintains the mapping from guest virtual address to host physical address. Page table protection helps to keep shadow page table and guest OS page table synchronization. VMM will apply write protection to all the physical frames of guest page tables, which lead the guest page table write exception and trap to VMM.
+
+	
+	In \ref{fig1}, whenever guest OS load cr3 which is a privileged instruction. VMM will trap that and load shadow page table cr3. Since shadow page table is in write protection. every write to shadow page table will result in a page fault. VMM will have a chance to fix the page fault and update shadow page fault. After the shadow page table and the guest OS page table are synchronized, every memory access to the page returns the normal process. VMM has no aware of guest OS memory access.
+	
+	
+	
+	\bibliographystyle{abbrv}
+	\bibliography{biblio}
+	
+\end{document}
+
+

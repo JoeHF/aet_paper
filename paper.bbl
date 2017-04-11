@@ -11,6 +11,16 @@ X.~Hu, X.~Wang, L.~Zhou, Y.~Luo, C.~Ding, and Z.~Wang.
 \newblock In {\em 2016 USENIX Annual Technical Conference (USENIX ATC 16)},
   pages 351--364, Denver, CO, 2016. USENIX Association.
 
+\bibitem{MasteringKVM}
+P.~M. Humble Devassy~Chirammal and A.~Vettathu.
+\newblock {\em Mastering KVM Virtualization}.
+\newblock Packt, 2016.
+
+\bibitem{Intel}
+Intel.
+\newblock {\em Intel® 64 and IA-32 Architectures Software Developer's Manual}.
+\newblock Intel Corporation, 2016.
+
 \bibitem{Jo2013Efficient}
 C.~Jo, E.~Gustafsson, J.~Son, and B.~Egger.
 \newblock Efficient live migration of virtual machines using shared storage.
@@ -66,5 +76,10 @@ J.~Wires, S.~Ingram, Z.~Drudi, N.~J.~A. Harvey, and A.~Warfield.
 \newblock Characterizing storage workloads with counter stacks.
 \newblock In {\em Usenix Conference on Operating Systems Design and
   Implementation}, pages 335--349, 2014.
+
+\bibitem{Zhao2009Dynamic}
+W.~Zhao, Z.~Wang, and Y.~Luo.
+\newblock Dynamic memory balancing for virtual machines.
+\newblock {\em Acm Sigops Operating Systems Review}, 43(3):37--47, 2009.
 
 \end{thebibliography}

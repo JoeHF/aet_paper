@@ -1,6 +1,7 @@
 \documentclass[10pt,twocolumn]{article}
 \usepackage{times}
 \usepackage{url}
+\usepackage{graphicx} 
 
 % do not change these values
 \baselineskip 12pt
@@ -53,9 +54,66 @@ AET model is build on the probability of the cache block movement. $AET(c)$ is t
 \begin{equation}\label{eq1}
 \int_{0}^{AET(c)}v(t)dt=\int_{0}^{AET(c)}P(t)dt=c
 \end{equation}
-Given a cache of size c, according to \ref{eq1}, we can conduct MRC if we know the probability distribution of $P(t)$. $MRC(c) = P(AET(c))$. The probability of the access whose reuse time is greater than average eviction time of the cache is also this cache's miss ratio.
+Given a cache of size c, according to \ref{eq1}, we can conduct MRC if we know the probability distribution of $P(t)$. $MRC(c) = P(AET(c))$. The probability of the access whose reuse time is greater than average eviction time of the cache is also this cache's miss ratio. In another word, MRC can be easily calculated if we know the reuse time distribution. And reuse time distribution can be estimated by reuse time histogram.
+\begin{equation}
+MRC(m) = \frac{\sum\nolimits_{i=AET(m)+1}^{\infty} rtd[i]}   {\sum\nolimits_{i=0}^{\infty} rtd[i]}
+\end{equation}
+
+\subsection{AET Sampling}
+According to AET theory, Reuse time histogram is needed to calculate the MRC. In order to get a full reuse time histogram, we need a complete access sequence. However, the overhead to get full access sequence is not acceptable. Take SPEC2006 as an example, one benchmark will have hundreds of millions of memory access. On one hand, it's hard to get full memory access. On the other hand, if every memory access should be recorded and calculate reuse time. The performance of the system for sure will be degraded severely.
+
+AET theory presents sampling techniques. Using AET random sampling with sampling rate 1*10-6, the Mean Absolute Error (MAE) is 0.01. That makes online tracking MRC possible.
 
 \section{Design}
+\subsection{Implementation in Virtualization}
+In virtualization, host machine knows nearly nothing about virtual machines. Only privileged instructions are emulated to overcome the limitations arising from guest operating system running in Ring 1 and VMM running in Ring 0\cite{MasteringKVM}. To illustrate how AET theory is put into virtualization, we have to understand how memory is managed in full virtualization environment.
+
+Page tables are the data structrue used by a virtual memory system to store the mapping between virtual addresses and physical address. Traditionally, OS fully controls all physical memory space and provides a continuous addressing space to each process. But in virtualization, mutiple guest OS share the same physical memory. There should be a method to map guest OS virtual address to real machine physical memory. One way is to use shadow page table. Guest OS will maintain its own virtual memory page table in the guest physical memory frames. For each guest physical memory frame, VMM should map it to host physical memory frame. Shadow page table maintains the mapping from guest virtual address to host physical address. Page table protection helps to keep shadow page table and guest OS page table synchronization. VMM will apply write protection to all the physical frames of guest page tables, which lead the guest page table write exception and trap to VMM.
+\begin{figure}\label{fig1}
+\centering
+\includegraphics[width=0.4\textwidth]{spt.png}
+\end{figure}
+
+In \ref{fig1}, whenever guest OS load cr3 which is a privileged instruction, VMM will trap that and load shadow page table cr3. Since shadow page table is in write protection. Every write to shadow page table will result in a page fault. VMM will have a chance to fix the page fault and update shadow page table. After the shadow page table and the guest OS page table are synchronized, every memory access to the page returns the normal process. VMM has no aware of guest OS memory access.
+
+In order to track guest page access, we have to mark the page table to introduce some 
+artificial page fault. According to The Intel 64 and IA-32 Architectures Software Developer's Manual\cite{Intel}, there is reserved bit in PTE. For example, in our experiment environment, which is on intel x86-64 processors using IA-32e paging mode, there are four bits that is reserved (bit 51:48). \ref{fig2} Reserved bits must be 0, otherwise, the entry is used neither to reference another paging-structure entry nor to map a page. So if we have PTE collections, it's easy to track all page reference by marking reserved bits. The PTE number is a little bit huge. For a 4GB memory computer as an example, there are up to 1048576 PTEs if 4KB page used not considering huge page(2MB). An optimization is to collect page directory entry that references a page table. In x86-64 architecture, one page directory entry points to a page table that has 512 PTE. Using page directory entry(PDE) collection cuts down the space overhead to 2048 which is acceptable.
+\begin{figure}\label{fig2}
+	\centering
+	\includegraphics[width=0.4\textwidth]{pte.jpeg}
+\end{figure}
+
+\subsection{Hot page set}
+With PDE collection, we have chances to track all page reference by marking reserved bit. Once the marked page is used by guest OS, it will trap into VMM. Reserved bit should be clear and then give back the execution right to guest OS. Before giving back the execution right, VMM can record the referenced page and do lru or aet calculation. After memory access is over, mark reserved bit again. However, if all memory access is tracked, machines can hardly run. There are millions of memory access every second. One page fault means cache miss, TLB miss and context switch between guest OS and VMM.
+
+\begin{figure}\label{fig3}
+	\centering
+	\includegraphics[width=0.4\textwidth]{hss.jpeg}
+\end{figure}
+
+Zhao\cite{Zhao2009Dynamic} first presents hot set theory. They logically divide host pages into two sets, a hot page set and a cold page set. Only accesss to cold pages are trapped. Initially, all pages are marked as cold meaning all PTE's reserved bit is set. Cold pages enters hot page set after first use and clear reserved bit. Hot page set is organized as a FIFO queue. Once a page is marked as hot, its page frame number is appended to the tail of the queue. When the queue is full, the page referred to by the head entry is degenerated to the cold set, setting reserved bit again.
+
+Using hot page set reduces the number page faults by several orders of magnitude. The reason behind this is the program locality. Data is usually reused within a relatively small time duration. TLB is the hardware optimization for reducing the time that recent used time look up page table in memory. Due to hardware limitations, the size of TLB is small. Hot page set is stored in memory and it's a software optimization. Zhao\cite{Zhao2009Dynamic} sets hot page size up to 4096 and still has a high precision. Our work refers to their selection for the size of hot page set and the following experimental data seems it works very well.
+
+\subsection{Sampling}
+Exeperiment result show just using hot page set still produces a lot of overhead. For example, xxxxxxxxxxxxx. Another optimization needs to be taken to reduce the overhead to the normal range. Our prior works, Shards\cite{shards} and AET\cite{aet}, both uses sampling technique. Their core idea is centered around a simple question, whether they can get Approximate optimal MRC by random sampling. Although there are a lot of optimizations for lru algorithm or newly invented novel algorithm to reduce the cost on MRC construction. Sampling from the source solves the problem of overhead.
+
+These two works of sampling have some distinctions. Shards‘ concept is pretty simple - for each referenced location L, the decision of whether or not to sample L is based on that hash(L) satisfies some condition - hash(L) mod 100\textless K means K\% sampling rate. AET sampling according to probability choose whether or not to sample a reference. It means the distance between two adjacent monitoring points is a random value. Unlike shards' method, every reference in the trace has a chance to be sampled. These two works both show good results.
+
+In our situation, random sampling seems impossible. There is so huge overhead to get full reference to memory, not saying randomly pick some to track. What we have is a collection of PTEs. A practical way to use sample method to track page reference is randomly choosing PTE according the hash value of PTE address which is like Shards. To avoid tracking fixed set of PTE, we periodically change the sampling collection. Every period, we scan the PTE collection and randomly pick PTE to set reserved bit. In this way, we guarantee our tracking set is random and often changing.
+
+\subsection{Dynamic sampling rate}
+Hot page set and sampling reduce the overhead drastically. But there is still a problem. Hot page set size is based on locality. Programs have a different degree of locality. Even within one program, locality varies frequently. Fixed hot page set size and sampling rate may not reduce the overhead to the acceptable range. Meantime, if a program's memory needs are not so big, with a large hot page set size and a small track rate, the number of tracked page becomes too small. AET algorithm is based on probability. Too small samples will also affect accuracy. xxxxx reflects the overhead with fixed hot page set size and sampling rate.
+
+xxxxxxx 表格 分别增加热页集大小和采样率对于开销的影响
+
+Increasing hot page set size or decreasing sampling rate both reduce overhead. How to make a choice, there is no theory support nor prior knowledge. It's a two viariables problem. By fixing one viarable, we change another one to watch the overhead change. Experiments result show that decreasing sampling rate reduce the overhead immediately, and increasing hot page set may or may not reduce the overhead. For example, xxxxxxxxx. We run this benchmark again to check why increasing hot page set doesn't reducing overhead immediately and count the page fault number that we manual make.
+
+xxxxxxx 不同热页集下page fault次数
+
+In the tables xxxxxxx, it shows increasing hot page set size may not decreasing page fault number. The reason is that if a program's spatial locality is much larger than our hot page set size or much smaller than that, the effect of increasing hot page set size or decreasing is not evident. Keep increasing hot page set size obvious can reduce page fault numbers but this process is slow. However changing sampling rate directly reduces the size of tracking page set. Obviously it's effect is remarkable. Since we can not slow down the performance of the virtual machine, we need a machanism to reduce overhead quickly. Our research is focused on changing sampling rate. Before that, it's important to verify whether changing hot page set size or samping rate influence accuracy. From our experiment, these changes have little effect on accuracy. And from prior work, dynamic changing hot page set size is a method to reduce large working set program overhead\cite{Wang2016Dynamic}, One ten thousandth sampling rate still maintains high accuracy\cite{aet}. Based on the prior research and our experimental varify, our work use dynamic hot page set size and sampling rate to reduce overhead.
+
+xxxxxx graph 精度的图
 
 
 \section{Conclusion}
