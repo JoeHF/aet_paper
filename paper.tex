@@ -2,6 +2,11 @@
 \usepackage{times}
 \usepackage{url}
 \usepackage{graphicx} 
+\usepackage{subfigure}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{diagbox}
 
 % do not change these values
 \baselineskip 12pt
@@ -11,6 +16,9 @@
 \topmargin 0in
 \headheight 0in
 \headsep 0in
+
+\setlength{\abovecaptionskip}{0pt}
+\setlength{\belowcaptionskip}{10pt}
 
 \begin{document}
 
@@ -103,17 +111,122 @@ These two works of sampling have some distinctions. Shards‘ concept is pretty 
 In our situation, random sampling seems impossible. There is so huge overhead to get full reference to memory, not saying randomly pick some to track. What we have is a collection of PTEs. A practical way to use sample method to track page reference is randomly choosing PTE according the hash value of PTE address which is like Shards. To avoid tracking fixed set of PTE, we periodically change the sampling collection. Every period, we scan the PTE collection and randomly pick PTE to set reserved bit. In this way, we guarantee our tracking set is random and often changing.
 
 \subsection{Dynamic sampling rate}
-Hot page set and sampling reduce the overhead drastically. But there is still a problem. Hot page set size is based on locality. Programs have a different degree of locality. Even within one program, locality varies frequently. Fixed hot page set size and sampling rate may not reduce the overhead to the acceptable range. Meantime, if a program's memory needs are not so big, with a large hot page set size and a small track rate, the number of tracked page becomes too small. AET algorithm is based on probability. Too small samples will also affect accuracy. xxxxx reflects the overhead with fixed hot page set size and sampling rate.
+Hot page set and sampling reduce the overhead drastically. But there is still a problem. Hot page set size is based on locality. Programs have different degrees of locality. Even within one program, locality varies frequently. Fixed hot page set size and sampling rate may not reduce the overhead to the acceptable range. Meantime, if a program's memory needs are not so big, with a large hot page set size and a small track rate, the number of tracked page becomes too small. AET algorithm is based on probability and too small samples will also affect accuracy. Table \ref{table2} shows the overhead with fixed hot page set size(64 pages) and sampling rate($\frac{1}{128}$).
 
-xxxxxxx 表格 分别增加热页集大小和采样率对于开销的影响
+\vspace{3pt}
+\renewcommand\arraystretch{1.5}
+\begin{table}[H]
+	\caption{Overhead}\label{table2}
+	\centering
+	\begin{tabular}{|c|c|}
+		\hline
+		benchmark & overhead \\
+		\hline
+		gems & 1.071972904 \\
+		\hline
+		milc & 1.11369509 \\
+		\hline
+		mcf & 1.070967742 \\
+		\hline
+		cactus & 1.013490725 \\
+		\hline
+		soplex & 1.031879195 \\
+		\hline
+		
+	\end{tabular}
+\end{table}
 
-Increasing hot page set size or decreasing sampling rate both reduce overhead. How to make a choice, there is no theory support nor prior knowledge. It's a two viariables problem. By fixing one viarable, we change another one to watch the overhead change. Experiments result show that decreasing sampling rate reduce the overhead immediately, and increasing hot page set may or may not reduce the overhead. For example, xxxxxxxxx. We run this benchmark again to check why increasing hot page set doesn't reducing overhead immediately and count the page fault number that we manual make.
+
+Increasing hot page set size or decreasing sampling rate both reduce overhead. How to make a choice, there is no theory support nor prior knowledge. It's a two viariables problem. By fixing one viarable, we change another one to watch the overhead change. Experiments result show that decreasing sampling rate reduce the overhead immediately, and increasing hot page set may or may not reduce the overhead. As shown in Table \ref{table1} We run this benchmark again to check why increasing hot page set doesn't reducing overhead immediately and count the page fault number that we manual make.
+
+\vspace{3pt}
+\renewcommand\arraystretch{1.5}
+\begin{table}[H]
+	\caption{GemsFDTD}\label{table1}
+	\centering
+	\begin{tabular}{|c|c|c|c|c|}
+		\hline
+		\diagbox{hss}{tr} & $\frac{1}{64}$ & $\frac{1}{128}$ & $\frac{1}{256}$ & $\frac{1}{512}$ \\
+		\hline
+		64 & 1.1583 & 1.0720 & 1.0415 & 1.0110 \\
+		\hline
+		128 & 1.1558 & 1.0771 & 1.0390 & 1.0237 \\
+		\hline
+		256 & 1.1507 & 1.0847 & 1.0364 & 1.0161 \\
+		\hline
+	\end{tabular}
+\end{table}
 
 xxxxxxx 不同热页集下page fault次数
 
-In the tables xxxxxxx, it shows increasing hot page set size may not decreasing page fault number. The reason is that if a program's spatial locality is much larger than our hot page set size or much smaller than that, the effect of increasing hot page set size or decreasing is not evident. Keep increasing hot page set size obvious can reduce page fault numbers but this process is slow. However changing sampling rate directly reduces the size of tracking page set. Obviously it's effect is remarkable. Since we can not slow down the performance of the virtual machine, we need a machanism to reduce overhead quickly. Our research is focused on changing sampling rate. Before that, it's important to verify whether changing hot page set size or samping rate influence accuracy. From our experiment, these changes have little effect on accuracy. And from prior work, dynamic changing hot page set size is a method to reduce large working set program overhead\cite{Wang2016Dynamic}, One ten thousandth sampling rate still maintains high accuracy\cite{aet}. Based on the prior research and our experimental varify, our work use dynamic hot page set size and sampling rate to reduce overhead.
+In the tables xxxxxxx, it shows increasing hot page set size may not decreasing page fault number. The reason is that if a program's spatial locality is much larger than our hot page set size or much smaller than that, the effect of increasing hot page set size or decreasing is not evident. Keep increasing hot page set size obvious can reduce page fault numbers but this process is slow. However changing sampling rate directly reduces the size of tracking page set. Obviously it's effect is remarkable. Since we can not slow down the performance of the virtual machine, we need a machanism to reduce overhead quickly. Our research is focused on changing sampling rate. Before that, it's important to verify whether changing hot page set size or samping rate influence accuracy. From our experiment, these changes have little effect on accuracy. And from prior work, dynamic changing hot page set size is a method to reduce large working set program overhead\cite{Wang2016Dynamic}, One ten thousandth sampling rate still maintains high accuracy\cite{aet}. Based on the prior research and our experimental varify, our work use dynamic sampling rate to reduce overhead.
 
 xxxxxx graph 精度的图
+
+But how to change sampling rate dynamically is still a challenge. The first thing is to choose a original sampling rate. Too large or too small this value may leads to bad result. Too large sampling rate cause the overhead at the beginning too massive. And we all know adjusting sampling rate takes time. If the monitoring period is 5 seconds and it takes 6 times to adjust sampling rate to suitable value, 30 seconds are wasted. Besides that, the most severe problem is the performance of virtual machine at the tracking beginning will slow down badly which is unacceptable. Too little sampling rate also has bad effect on accuracy. Because AET is a probability algorithm, a small amount of sample will reduce the accuracy. Through experiments in our environment, we choose sampling rate of $1/128$ at first. Our virtual machine's memory configuration is 4GB, and hot page set size is 64 pages. Experiments show this sampling rate chosen controls the overall overhead at the low level. But this value still remains configurable. If virtual machine's memory is large. We suggest reducing sampling rate appropriately.
+
+According to the experiments shown in Wang\cite{Wang2016Dynamic}, Gems, Milc and Mcf in SPEC2006 shows high overhead. We test these benchmark in our environment using 64 hot page set size and sampling rate of $1/128$.
+\begin{table*}[!htbp]
+	\centering
+	\caption{这是一张奇怪的表格}\label{tab:aStrangeTable}
+	\begin{tabular}{cccccc}
+		\toprule
+		benchmark & base time & real time & memory counter & page fault counter & overhead \\
+		\midrule
+		gems & 394 & 455 & 9.22331E+11 & 26517108 & 1.155800169 \\
+		milc & 387 & 453 & 4.17793E+11 & 30116393 & 1.170542636 \\
+		mcf & 310 & 353 & 1.46059E+11 & 17879310 & 1.138709677 \\
+		\bottomrule
+	\end{tabular}
+\end{table*}
+
+\section{Evaluation}
+\subsection{Experimental Setup}
+Our experiments are performed on an Intel CORE I7 machine with 16GB of physical memory and four 2.80 GHz cores with support of Hyper-threading(HT). All of our experiments are carried out on a hypervisor based on Xen 4.5.1 and the linux kernel version 4.2.1, while both dom0 and the guest systems are built on CentOS 6.4. To exclude the impact of CPU resource contention when multiple VMs are running, each VM is assigned a dedicated CPU core. Each VM is assigned with 4 GB of memory. And in our experiments, tracking period is 5 seconds and every 5 seconds we report the MRC curve.
+
+Our tracking system is a general framework implementing hot page set and sampling mechanism. All kinds of algorithm can run upon that including AET model or optimized LRU. To varify AET model's accuracy, we compare the MRC curve using these two algorithm. On our online system, we use AET and LRU to calculate MRC at the same time and guarantee these two methods uses the same access trace. There are two kinds of benchmarks, one is a benchmark written on our own. We call it fake benchmark. This benchmark is pretty simple, allocate a fixed size of memory, scan this memory sequentially and repeatedly. We can control our benchmark's memory use freely. By mallocing more or less memory, we can produce even more benchmark if we like. The other benchmark is from SPEC CPU 2006\cite{Henning2000spec}. These benchmark is more general and realistic and they are chosen to represent the sequential workload.
+
+\subsection{Correctness}
+
+After a monitoring period, we draw MRC curve using AET and LRU. There are more than one period during each benchmark. We randomly pick up some period miss curve to compare the results. We found that two MRC curve using different methods have high similarity. AET is a probability algorithm which aims to get approximate optimal results. And if we take the working set size under $5\%$ miss rate as its memory need, we can draw programs' working set trend graph. Similarly, LRU and AET's working set trends are basically the same.
+
+
+xxxxxxxxxxx 某一时刻的LRU和AET的比较
+
+
+\begin{figure*}[!htbp]
+	\centering
+	\subfigure{
+		\begin{minipage}[b]{0.1\textwidth}
+			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_milc.png} \\
+			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_mcf.png} 
+		\end{minipage}
+	}
+	\subfigure{
+		\begin{minipage}[b]{0.1\textwidth}
+			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_cactus.png} \\
+			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_sphinx3.png} 
+		\end{minipage}
+	}
+	\subfigure{
+		\begin{minipage}[b]{0.1\textwidth}
+			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_astar.png} \\
+			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_bwaves.png} 
+		\end{minipage}
+	}
+	\subfigure{
+		\begin{minipage}[b]{0.1\textwidth}
+			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_gcc.png} \\
+			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_gcc.png} 
+		\end{minipage}
+	}
+	\subfigure{
+		\begin{minipage}[b]{0.1\textwidth}
+			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_lbm.png} \\
+			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_sjeng.png} 
+		\end{minipage}
+	}
+\end{figure*}
 
 
 \section{Conclusion}

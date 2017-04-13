@@ -5,6 +5,11 @@ P.~J. Denning.
 \newblock The working set model for program behavior.
 \newblock {\em Communications of the Acm}, 26(1):43--48, 1968.
 
+\bibitem{Henning2000spec}
+J.~L. Henning.
+\newblock Spec cpu2000: Measuring cpu performance in the new millennium.
+\newblock {\em Computer}, 33(7):28--35, July 2000.
+
 \bibitem{aet}
 X.~Hu, X.~Wang, L.~Zhou, Y.~Luo, C.~Ding, and Z.~Wang.
 \newblock Kinetic modeling of data eviction in cache.
