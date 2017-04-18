@@ -43,6 +43,12 @@ R.~L. Mattson, J.~Gecsei, D.~R. Slutz, and I.~L. Traiger.
 \newblock Evaluation techniques for storage hierarchies.
 \newblock {\em Ibm Systems Journal}, 9(2):78--117, 1970.
 
+\bibitem{Narayanan2008Write}
+D.~Narayanan, A.~Donnelly, and A.~Rowstron.
+\newblock Write off-loading: Practical power management for enterprise storage.
+\newblock In {\em Usenix Conference on File and Storage Technologies}, pages
+  256--267, 2008.
+
 \bibitem{Rajasekaran2016Multi}
 S.~Rajasekaran, S.~Duan, W.~Zhang, and T.~Wood.
 \newblock Multi-cache: Dynamic, efficient partitioning for multi-tier caches in

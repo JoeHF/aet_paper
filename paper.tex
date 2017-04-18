@@ -8,6 +8,10 @@
 \usepackage{multirow}
 \usepackage{diagbox}
 
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+
 % do not change these values
 \baselineskip 12pt
 \textheight 9in
@@ -166,7 +170,7 @@ xxxxxx graph 精度的图
 But how to change sampling rate dynamically is still a challenge. The first thing is to choose a original sampling rate. Too large or too small this value may leads to bad result. Too large sampling rate cause the overhead at the beginning too massive. And we all know adjusting sampling rate takes time. If the monitoring period is 5 seconds and it takes 6 times to adjust sampling rate to suitable value, 30 seconds are wasted. Besides that, the most severe problem is the performance of virtual machine at the tracking beginning will slow down badly which is unacceptable. Too little sampling rate also has bad effect on accuracy. Because AET is a probability algorithm, a small amount of sample will reduce the accuracy. Through experiments in our environment, we choose sampling rate of $1/128$ at first. Our virtual machine's memory configuration is 4GB, and hot page set size is 64 pages. Experiments show this sampling rate chosen controls the overall overhead at the low level. But this value still remains configurable. If virtual machine's memory is large. We suggest reducing sampling rate appropriately.
 
 According to the experiments shown in Wang\cite{Wang2016Dynamic}, Gems, Milc and Mcf in SPEC2006 shows high overhead. We test these benchmark in our environment using 64 hot page set size and sampling rate of $1/128$.
-\begin{table*}[!htbp]
+\begin{table*}
 	\centering
 	\caption{这是一张奇怪的表格}\label{tab:aStrangeTable}
 	\begin{tabular}{cccccc}
@@ -184,50 +188,96 @@ According to the experiments shown in Wang\cite{Wang2016Dynamic}, Gems, Milc and
 \subsection{Experimental Setup}
 Our experiments are performed on an Intel CORE I7 machine with 16GB of physical memory and four 2.80 GHz cores with support of Hyper-threading(HT). All of our experiments are carried out on a hypervisor based on Xen 4.5.1 and the linux kernel version 4.2.1, while both dom0 and the guest systems are built on CentOS 6.4. To exclude the impact of CPU resource contention when multiple VMs are running, each VM is assigned a dedicated CPU core. Each VM is assigned with 4 GB of memory. And in our experiments, tracking period is 5 seconds and every 5 seconds we report the MRC curve.
 
-Our tracking system is a general framework implementing hot page set and sampling mechanism. All kinds of algorithm can run upon that including AET model or optimized LRU. To varify AET model's accuracy, we compare the MRC curve using these two algorithm. On our online system, we use AET and LRU to calculate MRC at the same time and guarantee these two methods uses the same access trace. There are two kinds of benchmarks, one is a benchmark written on our own. We call it fake benchmark. This benchmark is pretty simple, allocate a fixed size of memory, scan this memory sequentially and repeatedly. We can control our benchmark's memory use freely. By mallocing more or less memory, we can produce even more benchmark if we like. The other benchmark is from SPEC CPU 2006\cite{Henning2000spec}. These benchmark is more general and realistic and they are chosen to represent the sequential workload.
+Our tracking system is a general framework implementing hot page set and sampling mechanism. All kinds of algorithm can run upon that including AET model or optimized LRU. To varify AET model's accuracy, we compare the MRC curve using these two algorithm. On our online system, we use AET and LRU to calculate MRC at the same time and guarantee these two methods uses the same access trace. There are two kinds of benchmarks, one is a benchmark written on our own shown in Algorithm \ref{alg1}. We call it fake benchmark. This benchmark is pretty simple, allocate a fixed size of memory, scan this memory sequentially and repeatedly. We can control our benchmark's memory use freely. By mallocing more or less memory, we can produce even more benchmark if we like. In our experiment, each step's memory usage is as shown in table \ref{table4}. The other benchmark is from SPEC CPU 2006\cite{Henning2000spec}. These benchmark is more general and realistic and they are chosen to represent the sequential workload. 
 
-\subsection{Correctness}
+\begin{algorithm}
+	\caption{Fake benchmark}
+	\label{alg1}
+		\begin{algorithmic}  
+			\STATE malloc N MB memory organized as an array;
+			\STATE define a list L that indicates memory usage in each step;
+			\FOR{each $i \in L$}  
+			\STATE scan the first i MB array of N several times;\  
+			\ENDFOR  
+		\end{algorithmic}  
+\end{algorithm}
 
-After a monitoring period, we draw MRC curve using AET and LRU. There are more than one period during each benchmark. We randomly pick up some period miss curve to compare the results. We found that two MRC curve using different methods have high similarity. AET is a probability algorithm which aims to get approximate optimal results. And if we take the working set size under $5\%$ miss rate as its memory need, we can draw programs' working set trend graph. Similarly, LRU and AET's working set trends are basically the same.
-
-
-xxxxxxxxxxx 某一时刻的LRU和AET的比较
-
-
-\begin{figure*}[!htbp]
+\vspace{3pt}
+\renewcommand\arraystretch{1.5}
+\begin{table*}[htbp]
+	\caption{Overhead}\label{table3}
 	\centering
-	\subfigure{
-		\begin{minipage}[b]{0.1\textwidth}
-			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_milc.png} \\
-			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_mcf.png} 
-		\end{minipage}
-	}
-	\subfigure{
-		\begin{minipage}[b]{0.1\textwidth}
-			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_cactus.png} \\
-			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_sphinx3.png} 
-		\end{minipage}
-	}
-	\subfigure{
-		\begin{minipage}[b]{0.1\textwidth}
-			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_astar.png} \\
-			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_bwaves.png} 
-		\end{minipage}
-	}
-	\subfigure{
-		\begin{minipage}[b]{0.1\textwidth}
-			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_gcc.png} \\
-			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_gcc.png} 
-		\end{minipage}
-	}
-	\subfigure{
-		\begin{minipage}[b]{0.1\textwidth}
-			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_lbm.png} \\
-			\includegraphics[width=1\textwidth]{img/aet_lru_cmp_sjeng.png} 
-		\end{minipage}
-	}
-\end{figure*}
+	\begin{tabular}{|c|c|c|c|c|c|c|}
+		\hline
+		step 1 & step2 & step3 & step4 & step5 & step6 & step7 \\
+		\hline
+		100MB & 300MB & 500MB & 700MB & 500MB & 300MB & 100MB \\
+		\hline
+	\end{tabular}
+\end{table*}
+\subsection{Correctness}
+Hu\cite{aet} evaluates the correctness of AET using "master" MSR trace(created by \cite{Wires2014Characterizing}). The Mean Absolute Error(MAE) is 0.01 using AET random sampling with sampling rate $1*10^6$. However the "master" MSR trace is the storage traces released by Microsoft Research Cambridge(MSR)\cite{Narayanan2008Write}. They didn't evaluate AET model using real memory trace. MEB\cite{Wang2016Dynamic} using optimized LRU algorithm and hot page set gets accurate MRC curve. We compare our AET model and MEB using the same trace. How to do that is pretty simple. After tracking a page fault we manually made, we calculate this page's reuse distance by LRU list and reuse time by AET hash table. After some time, using reuse distance histogram and reuse time histogram, we can get two MRC curve by different ways. The experimental parameters are followed by MEB\cite{Wang2016Dynamic}. Hot page set size is fixed as 2048 pages. Since MEB didn't use sampling technique. In this experiment, sampling is turned off.
 
+As shown in Figure \ref{fig4}, fake benchmark has 7 stages(size of (L) is 7). AET model uses reuse time histogram and LRU model uses reuse distance histogram. In our fake benchmark, memory is accessed sequentially. In LRU model, every access's reuse distance is the whole memory size. In AET model, we use logical time as reuse time which is the number of reference between this access and the last. So reuse time is also the whole memory size. Both reuse time histogram and the reuse distance histogram have the same shape. In this situation, we get almost the same result.
+
+\begin{figure}[!htp]
+	\caption{fake benchmark}
+	\label{fig4}
+	\includegraphics[width=0.5\textwidth]{img/aet_lru_cmp/aet_lru_cmp_fakestage.png}
+\end{figure} 
+
+In another situation whose memory access pattern is in real workload, we draw the miss curve by AET model and LRU model. Since our monitoring period is 5 seconds, there are too many MRC graph to show in this paper. We pick up some MRC curve randomly when running the benchmark as show in Figure \ref{fig6}. In real workload, page's reuse distance is almost less than reuse time because of the locality. Pages that are current used will be likely reused soon. AET's model obtains approximate result. With MRC curve, we can define working set easily. If we take 5\% miss rate's memory as working set, we can draw a working set changing graph. To evaluate AET model's overall accuracy, we draw working set changing graph using LRU model too. As shown in Figure \ref{fig5}, there are some errors in AET model.
+
+Besides drawing pictures to compare the result using the two algorithm. We also calculate the Mean Absolute Error(MAE) of all SPEC 2006 benchmark. It gives about 0.01 average MAE which is good for online tracking.
+
+\begin{figure}
+	\centering
+	\caption{mrc}
+	\label{fig6}
+	\subfigure{
+		\begin{minipage}[b]{0.2\textwidth}
+			\includegraphics[width=1\textwidth]{img/mrc_cmp/mrc_cmp_fullmilc_1491919033.png} \\
+			\includegraphics[width=1\textwidth]{img/mrc_cmp/mrc_cmp_fullgcc_1491926637.png} \\
+		\end{minipage}
+		\begin{minipage}[b]{0.2\textwidth}
+			\includegraphics[width=1\textwidth]{img/mrc_cmp/mrc_cmp_fulllib_1491934003.png} \\
+			\includegraphics[width=1\textwidth]{img/mrc_cmp/mrc_cmp_fullsjeng_1491930705.png} \\
+		\end{minipage}
+	}
+\end{figure}
+
+\begin{figure}[!htbp]
+	\centering
+	\caption{wss}
+	\label{fig5}
+	\subfigure{
+		\begin{minipage}[b]{0.2\textwidth}
+			\includegraphics[width=1\textwidth]{img/aet_lru_cmp/aet_lru_cmp_milc.png} \\
+			\includegraphics[width=1\textwidth]{img/aet_lru_cmp/aet_lru_cmp_gcc.png} \\
+		\end{minipage}
+	}
+	\subfigure{
+		\begin{minipage}[b]{0.2\textwidth}
+			\includegraphics[width=1\textwidth]{img/aet_lru_cmp/aet_lru_cmp_lib.png} \\
+			\includegraphics[width=1\textwidth]{img/aet_lru_cmp/aet_lru_cmp_sjeng.png} \\
+		\end{minipage}
+	}
+\end{figure}
+
+%However, comparison above doesn't use sampling technique. Sampling is the core method to reduce the overhead. Since we have evaluate our system's accurace without sampling. We just need to compare the result that uses sampling or not. The time to run benchmark is much different whether we use sampling or not. So it's hard to draw the working set trend graph in one picture or calculating MAE. We use a rough way to compare sampling result by putting all the graph in a row. The graph is as show in Figure \ref{fig7}
+
+\begin{figure}[!htp]
+	\caption{fake benchmark}
+	\label{fig7}
+	\includegraphics[width=0.5\textwidth]{img/sampling_exp/sampling_exp_milc.png}
+\end{figure} 
+
+\subsection{Fixed Sampling}
+The overhead only using hot page set technique is not acceptable. We have evaluated our system with only hot page set optimization. MCF shows even 10 times overhead. And there are xx times overhead on average. We add timing program in our implementation. The first one path that consumes time in our system is the time when a page fault we created is tracked, we need to insert into a hash table, obtain reuse time and update reuse time histogram. The other one path is the time that we set PTE to manually introduce page fault. In this procedure, we have to scan all PTE, check the PTE validation and mark a bit in PTE. We periodly scan the PTE collections to make our tracking page fresh. If we have 4GB memory, Theoretically, the number of PTEs is up to 1 million so the overhead is the same as to scan an array with one million entrys. The third part of overhead is the time that collects PTE. We have optimize this process by collecting L1 page frames which contains 512 PTEs in 64 bits machine or 1024 PTEs in 32 bits machines. In another word, it reduces the space that needs to store the PTEs from one million to several thousands. When virtual machine's page is first used, we check whether its L1 page frame is stored. If not, add this frame in an array. We use hash to reduce the checking time to constant time. These three critical path is our algorithm overhead. The last overhead, the context switch time from virtual machine to VMM can not be recored and this part in our experiment is the most consuming one. We measure this overhead by watching page fault count. The number of page fault and the context switch time have positive correlations.
+
+Using hot page set size 2048 pages without sampling , we get the table \ref{table1}. The first three factors have tiny impact on the overhead. It relects that the AET model has low calculation complexity. The most consuming part is the context switch time. The page fault number it produces under our monitor is tens of thousands of times of the one that produces in real world.
+
+Using sampling, we can reduce the number of tracked pages. In experiments, we use 64 hot page set size and $\frac{1}{128}$ sampling rate to balance overhead and accuracy.
 
 \section{Conclusion}
 
