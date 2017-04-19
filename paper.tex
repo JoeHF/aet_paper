@@ -169,17 +169,68 @@ xxxxxx graph 精度的图
 
 But how to change sampling rate dynamically is still a challenge. The first thing is to choose a original sampling rate. Too large or too small this value may leads to bad result. Too large sampling rate cause the overhead at the beginning too massive. And we all know adjusting sampling rate takes time. If the monitoring period is 5 seconds and it takes 6 times to adjust sampling rate to suitable value, 30 seconds are wasted. Besides that, the most severe problem is the performance of virtual machine at the tracking beginning will slow down badly which is unacceptable. Too little sampling rate also has bad effect on accuracy. Because AET is a probability algorithm, a small amount of sample will reduce the accuracy. Through experiments in our environment, we choose sampling rate of $1/128$ at first. Our virtual machine's memory configuration is 4GB, and hot page set size is 64 pages. Experiments show this sampling rate chosen controls the overall overhead at the low level. But this value still remains configurable. If virtual machine's memory is large. We suggest reducing sampling rate appropriately.
 
-According to the experiments shown in Wang\cite{Wang2016Dynamic}, Gems, Milc and Mcf in SPEC2006 shows high overhead. We test these benchmark in our environment using 64 hot page set size and sampling rate of $1/128$.
+According to the experiments shown in Wang\cite{Wang2016Dynamic}, Gems, Milc and Mcf in SPEC2006 shows high overhead. We also randomly pick five of SPEC 2006 benchmark, Cactus, Soplex, lbm, sjeng and omnetpp. Besides, we choose our own fake benchmark. We test these benchmark in our environment using 64 hot page set size and sampling rate of $1/128$. As shown in Table \ref{table4}, Gems, Milc, Mcf Omnetpp have high overhead and another five benchmark's performance is good, less than or equal to 3\% overhead. We expect our monitoring system don't impact virtual machine's performance too much. 3\% overhead is still acceptable. But higher overhead is not acceptable. In Table \ref{table4}, we find a phenomenon that the benchmark whose page fault rate is less than $1*10^6$ show better performance. That's a hint to control the overhead of our monitoring system in an acceptable range. A page fault means a context switch from virtual machine to VMM which is a time-consuming work. So we need a mechanism to control the ratio between page fault counts and memory access counts in order to reduce the context switch number significantly.
+
+Page fault's ratio is important factor to contrl our system's overhead. We need a good demarcation point M to judge our system's performance. Experiments\ref{table4} shows $1*10^-6$ is a suitable value. We call this value Sr. If in last period, page fault's ratio is greater than M, we need to decrease tracking rate. If we define $\frac{1}{T}$ as our tracking rate and define r as the ratio between page fault count and memory count, we get the following equation.
+\begin{equation}
+T = T + 128 \qquad if\;\; r>Sr
+\end{equation}
+
+This method works well for large working set benchmark such as Gems. At the first monitoring periods, page fault ratio is larger than $\frac{1}{M}$ and tracking rate decreases from $\frac{1}{128}$ to $\frac{1}{1280}$. Figure \ref{fig8} shows how tracking rate decreases. The overall overhead of Gems is reduced from 7.2\% to 2.3\%. However, it takes 10 periods which means 50 seconds to reduce tracking rate to suitable value. The shortages of the lagging are the slowdown at first part of the benchmark. An intuitive idea is that the greater the distance between the actual page fault ratio and standard scale, the faster the tracking rate drops. We need an exponential drop algorithm\ref{alg2} rather than a linear algorithm. Gems is also tested and it only takes 4 periods reducing tracking rate shown in Figure \ref{fig9}. The overall cost is further reduced to 0.84\%.
+\begin{equation}
+T = T + 128 * (\log(\frac{r}{Sr}) + 1) \qquad if\;\; r>Sr
+\end{equation}
+\label{alg2}
+
+\begin{figure}[!htp]
+	\centering
+	\caption{fake benchmark}
+	\label{fig8}
+	\includegraphics[width=0.3\textwidth]{img/sampling_exp/gems_sampling.png}
+\end{figure} 
+
+\begin{figure}[!htp]
+	\centering
+	\caption{fake benchmark}
+	\label{fig9}
+	\includegraphics[width=0.3\textwidth]{img/nosampling/cmp_wss_fullgems.png}
+\end{figure} 
+
+The last problem is that when the tracking rate is reduced to a low value, what if the working set drops drastically? Take Gems as an example, when tracking rate is cut down to $\frac{1}{1280}$, the number of tracking page is 167. However, in next periods, Gems frees most of its memory and it only uses 100MB which is 25600 pages. With tracking rate $\frac{1}{1280}$, only 20 pages are tracked by our system. Every pages that we track are in hot pages which means we can not capture any page fault not to mention capturing any page reuse. If after a period, there are little pages tracked, the virtual machine's memory usage may drops. It's the time to increase tracking rate. However, increasing tracking rate is not as urgent as decreasing it because tracking nothing means on overhead and we know the upperbound of its memory usage. We define a least tracking page number P during a period and use n to indicate the number of pages actually intercepted. Use the following equation \ref{alg3} to increase tracking rate.
+\begin{equation}
+T = T - 64  \qquad if\;\; n < P
+\end{equation}
+\label{alg3}
+
+Based on the above algorithm, we get the complete dynamic tracking rate algorithm \ref{alg4}
+\begin{equation}
+T=\left\{
+\begin{array}{lcl}
+T + 128 * (\log(\frac{r}{Sr}) + 1) & & r>Sr\\
+T - 64 & & n < P
+\end{array} \right. 
+\end{equation}
+\label{alg4}
+
+
+
 \begin{table*}
 	\centering
-	\caption{这是一张奇怪的表格}\label{tab:aStrangeTable}
-	\begin{tabular}{cccccc}
+	\caption{这是一张奇怪的表格}
+	\label{table4}
+	\begin{tabular}{ccccccc}
 		\toprule
-		benchmark & base time & real time & memory counter & page fault counter & overhead \\
+		benchmark & base time & real time & memory counter & page fault counter & pf ratio & overhead \\
 		\midrule
-		gems & 394 & 455 & 9.22331E+11 & 26517108 & 1.155800169 \\
-		milc & 387 & 453 & 4.17793E+11 & 30116393 & 1.170542636 \\
-		mcf & 310 & 353 & 1.46059E+11 & 17879310 & 1.138709677 \\
+		gems & 394 & 455 & 9.22331E+11 & 26517108 & 1.44657E-05 & 1.155800169 \\
+		milc & 387 & 453 & 4.17793E+11 & 30116393 & 3.49945E-05 & 1.170542636 \\
+		mcf & 310 & 353 & 1.46059E+11 & 17879310 & 5.80389E-05 & 1.138709677 \\
+		cactus & 593 & 601 & 1.95042E+12 & 975016 & 4.99901E-07 & 1.013490725 \\
+		soplex & 199 & 205 & 2.61566E+11 & 1383318 & 5.2886E-06 & 1.031879195 \\
+		lbm & 217 & 224 & 3.49163E+11 & 2441754 & 6.99317E-06 & 1.033846154 \\
+		sjeng & 385 & 397 & 7.75961E+11 & 3961062 & 5.10472E-06 & 1.031168831 \\
+		omnetpp & 267 & 295 & 2.58982E+11 & 13369127 & 5.16217E-05 & 1.10625 \\
+		fake & 194 & 197 & 8.58526E+11 & 1352064 & 1.57487E-06 & 1.015463918 \\
 		\bottomrule
 	\end{tabular}
 \end{table*}
@@ -220,7 +271,7 @@ Hu\cite{aet} evaluates the correctness of AET using "master" MSR trace(created b
 
 As shown in Figure \ref{fig4}, fake benchmark has 7 stages(size of (L) is 7). AET model uses reuse time histogram and LRU model uses reuse distance histogram. In our fake benchmark, memory is accessed sequentially. In LRU model, every access's reuse distance is the whole memory size. In AET model, we use logical time as reuse time which is the number of reference between this access and the last. So reuse time is also the whole memory size. Both reuse time histogram and the reuse distance histogram have the same shape. In this situation, we get almost the same result.
 
-\begin{figure}[!htp]
+\begin{figure}
 	\caption{fake benchmark}
 	\label{fig4}
 	\includegraphics[width=0.5\textwidth]{img/aet_lru_cmp/aet_lru_cmp_fakestage.png}
@@ -272,12 +323,36 @@ Besides drawing pictures to compare the result using the two algorithm. We also 
 	\includegraphics[width=0.5\textwidth]{img/sampling_exp/sampling_exp_milc.png}
 \end{figure} 
 
-\subsection{Fixed Sampling}
-The overhead only using hot page set technique is not acceptable. We have evaluated our system with only hot page set optimization. MCF shows even 10 times overhead. And there are xx times overhead on average. We add timing program in our implementation. The first one path that consumes time in our system is the time when a page fault we created is tracked, we need to insert into a hash table, obtain reuse time and update reuse time histogram. The other one path is the time that we set PTE to manually introduce page fault. In this procedure, we have to scan all PTE, check the PTE validation and mark a bit in PTE. We periodly scan the PTE collections to make our tracking page fresh. If we have 4GB memory, Theoretically, the number of PTEs is up to 1 million so the overhead is the same as to scan an array with one million entrys. The third part of overhead is the time that collects PTE. We have optimize this process by collecting L1 page frames which contains 512 PTEs in 64 bits machine or 1024 PTEs in 32 bits machines. In another word, it reduces the space that needs to store the PTEs from one million to several thousands. When virtual machine's page is first used, we check whether its L1 page frame is stored. If not, add this frame in an array. We use hash to reduce the checking time to constant time. These three critical path is our algorithm overhead. The last overhead, the context switch time from virtual machine to VMM can not be recored and this part in our experiment is the most consuming one. We measure this overhead by watching page fault count. The number of page fault and the context switch time have positive correlations.
+\subsection{Overhead}
+The overhead only using hot page set technique is not acceptable. We have evaluated our system with only hot page set optimization. MCF shows even 10 times overhead. And there are xx times overhead on average. We add timing program in our implementation. The first one path that consumes time in our system is the time when a page fault we created is tracked, we need to insert into a hash table, obtain reuse time and update reuse time histogram(phase 1). The other one path is the time that we set PTE to manually introduce page fault. In this procedure, we have to scan all PTE, check the PTE validation and mark a bit in PTE(phase 2). We periodly scan the PTE collections to make our tracking page fresh. If we have 4GB memory, Theoretically, the number of PTEs is up to 1 million so the overhead is the same as to scan an array with one million entrys. The third part of overhead is the time that collects PTE. We have optimize this process by collecting L1 page frames which contains 512 PTEs in 64 bits machine or 1024 PTEs in 32 bits machines(phase 3). In another word, it reduces the space that needs to store the PTEs from one million to several thousands. When virtual machine's page is first used, we check whether its L1 page frame is stored. If not, add this frame in an array. We use hash to reduce the checking time to constant time. These three critical path is our algorithm overhead. The last overhead, the context switch time from virtual machine to VMM can not be recored and this part in our experiment is the most consuming one. We measure this overhead by watching page fault count. The number of page fault and the context switch time have positive correlations.
 
-Using hot page set size 2048 pages without sampling , we get the table \ref{table1}. The first three factors have tiny impact on the overhead. It relects that the AET model has low calculation complexity. The most consuming part is the context switch time. The page fault number it produces under our monitor is tens of thousands of times of the one that produces in real world.
+Using hot page set size 2048 pages without sampling , we get the table \ref{table5}. The first three factors have tiny impact on the overhead. It relects that the AET model has low calculation complexity. The most consuming part is the context switch time. The page fault number it produces under our monitor is tens of thousands of times of the one that produces in real world.
 
-Using sampling, we can reduce the number of tracked pages. In experiments, we use 64 hot page set size and $\frac{1}{128}$ sampling rate to balance overhead and accuracy.
+\begin{table*}[htbp]
+	\caption{Overhead}
+	\label{table5}
+	\centering
+	\begin{tabular}{|c|c|c|c|c|c|c|}
+		\hline
+		benchmark & time & phase1(s) & phase2(s) & phase3(s) & overhead & phase 1+2+3 overhead \\
+		\hline
+		milc & 3420 & 19 & 25 & 0 & 868.76\% & 1.287\% \\
+		\hline
+		mcf  & 3030 & 16 & 23 & 0 & 967.02\% & 1.287\% \\
+		\hline
+		cactus & 852 & 1 & 2 & 0 & 141.45\% & 0.352\% \\
+		\hline
+		soplex & 1130 & 5 & 7 & 0 & 568.79\% & 1.062\% \\
+		\hline
+		gems & 3260 & 17 & 22 & 0 & 828.11\% & 1.196\% \\
+		\hline
+		fake & 2250 & 12 & 18 & 0 & 1159.79\% & 1.333\% \\
+		\hline
+		
+	\end{tabular}
+\end{table*}
+
+\subsection{Dynamic sampling rate}
 
 \section{Conclusion}
 

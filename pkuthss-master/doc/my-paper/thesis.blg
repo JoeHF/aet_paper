@@ -1,0 +1,7 @@
+[0] Config.pm:354> INFO - This is Biber 2.7
+[1] Config.pm:357> INFO - Logfile is 'thesis.blg'
+[83] biber-MSWIN64:303> INFO - === 
+[123] Biber.pm:359> INFO - Reading 'thesis.bcf'
+[302] Biber.pm:835> INFO - Found 3 citekeys in bib section 0
+[327] Biber.pm:3670> INFO - Processing section 0
+[358] Biber.pm:3840> INFO - Looking for bibtex format file 'thesis.bib' for section 0
